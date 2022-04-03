@@ -36,7 +36,7 @@ void print_header(char *img){
     printf("\ntaille de l'image: %d octets", taille_image);
     printf("\napplication utilisee: %d", application);
     printf("\n0 normalement: %d", application2);
-    printf("\noctet du premier pixel: %d", debut);//fr
+    printf("\noctet du premier pixel: %d", debut);//non
 }
 
 //oui
