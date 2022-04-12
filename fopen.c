@@ -59,9 +59,9 @@ void print_info(char *img){
     printf("\nTaille de chaque row: %d\nNombre total de pixels: %d\nNombre d'octets de padding: %d\nPadding par row: %d\nPixels par row: %d\n", rowsize,pixels_nb,padding_total,padding_row,pixels_row);
 
     //on place le curseur (le pointeur fp) a l'octet du premier pixel (offset) et on lit les valeurs de rgb sur 3 char car on a 24 bits/pixel donc 3 octets/pixel
-    //fseek(fp, bmp_header.offset, SEEK_SET);
+    fseek(fp, bmp_header.offset, SEEK_SET);
 
-    /*printf("\nPixel Array: \n"); //affichage des octets 1 par 1
+    printf("\nPixel Array: \n"); //affichage des octets 1 par 1
     for(int i = 1; i<=dib_header.height; i++){  //ligne i
         for (int j = 1; j<= pixels_row; j++){  //pixel j
             fread(&pixel, 3, 1, fp);
@@ -71,9 +71,9 @@ void print_info(char *img){
         for(int k = 0; k<2; k++){
             printf("* | ");
         }
-    }*/
+    }
 
-    /*fseek(fp, bmp_header.offset, SEEK_SET);
+    fseek(fp, bmp_header.offset, SEEK_SET);
     printf("\n\nAffichage par pixel:\n"); //affichage valeurs pixels par pixel (plus lisible)
     int p = 1;
     for(int i = 1; i<=dib_header.height; i++){
@@ -83,15 +83,15 @@ void print_info(char *img){
             p++;
         }
         fseek(fp, padding_row, SEEK_CUR);
-    }*/
+    }
     printf("\n");
     
-    fseek(fp, bmp_header.offset, SEEK_SET);
+    /*fseek(fp, bmp_header.offset, SEEK_SET);
     for(int i = 1; i<=dib_header.height; i++){
         for (int j = 1; j<= pixels_row; j++){
-            fread(&pixel, 3, 1, fp);
-            //float avg = pixel.r*0.33 + pixel.g*0.5 + pixel.b*0.16;
-            float avg = (pixel.r + pixel.g + pixel.b)/3;
+            fread(&pixel, -3, 1, fp);
+            float avg = pixel.r*0.33 + pixel.g*0.5 + pixel.b*0.16;
+            //float avg = (pixel.r + pixel.g + pixel.b)/3;
             if(avg<25){
                 printf(" ");
             }
@@ -128,14 +128,14 @@ void print_info(char *img){
         }
         printf("\n");
         fseek(fp, padding_row, SEEK_CUR);
-    }
+    }*/
 
 }
     
 int main(void){
 
     if(sizeof(char) == 1 && sizeof(short int) == 2 && sizeof(int) == 4){
-        print_info("musashi.bmp");
+        print_info("small.bmp");
         return EXIT_SUCCESS;
     }
     else{
