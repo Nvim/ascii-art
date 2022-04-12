@@ -59,9 +59,89 @@ void print_info(char *img){
     printf("\nTaille de chaque row: %d\nNombre total de pixels: %d\nNombre d'octets de padding: %d\nPadding par row: %d\nPixels par row: %d\n", rowsize,pixels_nb,padding_total,padding_row,pixels_row);
 
     //on place le curseur (le pointeur fp) a l'octet du premier pixel (offset) et on lit les valeurs de rgb sur 3 char car on a 24 bits/pixel donc 3 octets/pixel
-    fseek(fp, bmp_header.offset, SEEK_SET);
+    
+    /*fseek(fp, -padding_row, SEEK_END);
+    fseek(fp, -3, SEEK_CUR);
+    fread(&pixel, 3, 1, fp);
+    printf("\n%d | %d | %d | ", pixel.b,pixel.g,pixel.r);
 
-    printf("\nPixel Array: \n"); //affichage des octets 1 par 1
+
+    fseek(fp, -6, SEEK_CUR);
+    fread(&pixel, 3, 1, fp);
+    printf("\n%d | %d | %d | ", pixel.b,pixel.g,pixel.r);
+
+    fseek(fp, -padding_row, SEEK_CUR);
+    fseek(fp, -6, SEEK_CUR);
+    fread(&pixel, 3, 1, fp);
+    printf("\n%d | %d | %d | ", pixel.b,pixel.g,pixel.r);
+
+    fseek(fp, -6, SEEK_CUR);
+    fread(&pixel, 3, 1, fp);
+    printf("\n%d | %d | %d | ", pixel.b,pixel.g,pixel.r);*/
+
+
+    //Affichage octet par octet depuis la fin
+    /*fseek(fp, 0, SEEK_END);
+    for(int i = 1; i<=dib_header.height; i++){
+        fseek(fp, -padding_row, SEEK_CUR);
+        for(int k = 0; k<padding_row; k++){
+            printf("* | ");
+        }
+        for(int j = 1; j<=pixels_row;j++){
+            fseek(fp, -3, SEEK_CUR);
+            fread(&pixel, 3, 1, fp);
+            printf("%d | %d | %d | ", pixel.b,pixel.g,pixel.r);
+            fseek(fp, -3, SEEK_CUR);
+        }
+    }*/
+    printf("\n");
+    //ascii dans l'ordre:
+    fseek(fp, 0, SEEK_END);
+    for(int i = 1; i<=dib_header.height; i++){
+        fseek(fp, -padding_row, SEEK_CUR);
+        for(int j = 1; j<=pixels_row;j++){
+            fseek(fp, -3, SEEK_CUR);
+            fread(&pixel, 3, 1, fp);
+            float avg = pixel.r*0.33 + pixel.g*0.5 + pixel.b*0.16;
+            if(avg<25){
+                printf(" ");
+            }
+            else if(avg<50){
+                printf(".");
+            }
+            else if(avg<50){
+                printf(":");
+            }
+            else if(avg<75){
+                printf("-");
+            }
+            else if(avg<100){
+                printf("=");
+            }
+            else if(avg<125){
+                printf("+");
+            }
+            else if(avg<150){
+                printf("*");
+            }
+            else if(avg<175){
+                printf("#");
+            }
+            else if(avg<200){
+                printf("%");
+            }
+            else if(avg<225){
+                printf("@");
+            }
+            else{
+                printf("$");
+            }
+            fseek(fp, -3, SEEK_CUR);
+        }
+        printf("\n");
+    }
+
+    /*printf("\nPixel Array: \n"); //affichage des octets 1 par 1
     for(int i = 1; i<=dib_header.height; i++){  //ligne i
         for (int j = 1; j<= pixels_row; j++){  //pixel j
             fread(&pixel, 3, 1, fp);
@@ -84,12 +164,12 @@ void print_info(char *img){
         }
         fseek(fp, padding_row, SEEK_CUR);
     }
-    printf("\n");
+    printf("\n");*/
     
     /*fseek(fp, bmp_header.offset, SEEK_SET);
     for(int i = 1; i<=dib_header.height; i++){
         for (int j = 1; j<= pixels_row; j++){
-            fread(&pixel, -3, 1, fp);
+            fread(&pixel, 3, 1, fp);
             float avg = pixel.r*0.33 + pixel.g*0.5 + pixel.b*0.16;
             //float avg = (pixel.r + pixel.g + pixel.b)/3;
             if(avg<25){
@@ -134,9 +214,20 @@ void print_info(char *img){
     
 int main(void){
 
+    struct bmp_header bmp_header;
+    struct dib_header dib_header; 
+    struct pixel pixel;
+
+
     if(sizeof(char) == 1 && sizeof(short int) == 2 && sizeof(int) == 4){
-        print_info("small.bmp");
+        
+        
+        
+        print_info("oui.bmp");
         return EXIT_SUCCESS;
+
+
+
     }
     else{
         printf("\nTaille des variables pas adaptée");
