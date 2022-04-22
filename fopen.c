@@ -190,6 +190,55 @@ void print_pixels(char *img, bmp_header bmp_header, dib_header dib_header, info 
     fclose(fp);
 }
 
+//initialise une matrice
+pixel** matrix(dib_header dib_header){
+    int i, j;
+
+    pixel ** matrice = (pixel **)malloc(dib_header.width*sizeof(pixel));
+        for (i = 0; i<dib_header.width; i++){
+            matrice[i] = (pixel *)malloc(dib_header.height*sizeof(pixel));
+        }
+    return matrice;
+}
+
+//remplit la matrice avec les valeurs des pixels:
+pixel ** fill_matrix(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel, struct pixel ** matrice){
+
+    FILE *fp = fopen(img, "rb");
+    if (fp == NULL)
+    {
+        printf("\nerreur");
+        exit(EXIT_FAILURE);
+    }
+
+    matrice = matrix(dib_header);
+
+    fseek(fp, bmp_header.offset, SEEK_SET);
+    for (int i = 0; i < dib_header.height; i++){ // ligne i
+        for (int j = 0; j < info.pixels_row; j++){ // pixel j
+            fread(&pixel, 3, 1, fp);
+            matrice [i][j] = pixel;
+        }
+        fseek(fp, info.padding_row, SEEK_CUR); // padding à la fin de chaque ligne, on avance le curseur de padding_row pour préparer la prochaine lecture et on print autant de 0 qu'il y a de padding_row
+    }
+    fclose(fp);
+    return matrice;
+}
+
+//affiche une matrice:
+void print_matrice(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel, struct pixel ** matrice){
+    matrice = fill_matrix(img, bmp_header, dib_header, info, pixel, matrice);
+    int i,j;
+
+    for (i = 0; i<dib_header.width; i++){
+        for(j = 0; j<dib_header.height; j++){
+            printf("%d %d %d | ", matrice[i][j].b, matrice[i][j].g, matrice[i][j].r);
+        }
+        printf("\n");
+    }
+}
+
+
 // Affiche un caractère par pixel:
 //(même fonction que print_array_reverse mais on print un caractère en fonction de la clarté d'un pixel au lieu de ses valeurs de rgb)
 void print_ascii(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel)
@@ -262,6 +311,25 @@ void print_ascii(char *img, bmp_header bmp_header, dib_header dib_header, info i
     fclose(fp);
 }
 
+//retourne un pixel en noir et blanc:
+pixel gray_pixel(pixel pixel){
+    pixel.r = pixel.r * 0.33 + pixel.g * 0.5 + pixel.b * 0.16;
+    pixel.b = pixel.r * 0.33 + pixel.g * 0.5 + pixel.b * 0.16;
+    pixel.g = pixel.r * 0.33 + pixel.g * 0.5 + pixel.b * 0.16;
+
+    return pixel;
+}
+void gray_img(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel, struct pixel ** matrice){
+    int i,j;
+    matrice = fill_matrix(img, bmp_header, dib_header, info, pixel, matrice);
+    for(i = 0; i<dib_header.width; i++){
+        //gray_pixel à chaque pixel
+    }
+
+}
+
+
+
 int main(void)
 {
     //déclaration des 4 structures:
@@ -274,16 +342,19 @@ int main(void)
     {
 
         // On remplit les structures grâce aux fonctions:
-        bmp_header = read_bmp("musashi.bmp", bmp_header);
-        dib_header = read_dib("musashi.bmp", dib_header);
+        bmp_header = read_bmp("small.bmp", bmp_header);
+        dib_header = read_dib("small.bmp", dib_header);
         info = get_info(bmp_header, dib_header);
 
-        print_info(bmp_header, dib_header, info); //affichage des infos des 2 headers et du struct info (debug)
+        //print_info(bmp_header, dib_header, info); //affichage des infos des 2 headers et du struct info (debug)
         printf("\n");
-        // print_array("oui.bmp", bmp_header, dib_header, info, pixel);
+        struct pixel ** matrice = matrix(dib_header);
+        fill_matrix("small.bmp", bmp_header, dib_header, info, pixel, matrice);
+        print_matrice("small.bmp", bmp_header, dib_header, info, pixel, matrice);
+        // prints_array("oui.bmp", bmp_header, dib_header, info, pixel);
         // print_pixels("oui.bmp", bmp_header, dib_header, info, pixel);
         // print_array_reverse("oui.bmp", bmp_header, dib_header, info, pixel);
-        print_ascii("musashi.bmp", bmp_header, dib_header, info, pixel);
+        //print_ascii("musashi.bmp", bmp_header, dib_header, info, pixel);
 
         return EXIT_SUCCESS;
     }
