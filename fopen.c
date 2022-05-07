@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
 struct bmp_header
 {                            // correspond aux 14 premiers octets
@@ -32,7 +34,9 @@ struct info
 
 struct pixel
 {
-    unsigned char b, g, r;
+    unsigned char b;
+    unsigned char g;
+    unsigned char r;
 };
 typedef struct bmp_header bmp_header;
 typedef struct dib_header dib_header;
@@ -45,7 +49,7 @@ bmp_header read_bmp(char *img, bmp_header bmp_header)
     FILE *fp = fopen(img, "rb");
     if (fp == NULL)
     {
-        printf("\nerreur");
+        printf("\nErreur: verifiez que l'image que vous voulez lire existe\n");
         exit(EXIT_FAILURE);
     }
     // printf("\nOuverture reussie: \n");
@@ -68,7 +72,7 @@ dib_header read_dib(char *img, dib_header dib_header)
     FILE *fp = fopen(img, "rb");
     if (fp == NULL)
     {
-        printf("\nerreur");
+        printf("\nErreur: verifiez que l'image que vous voulez lire existe\n");
         exit(EXIT_FAILURE);
     }
     // printf("\nOuverture reussie: \n");
@@ -132,9 +136,25 @@ void print_array(char *img, bmp_header bmp_header, dib_header dib_header, info i
         }
     }
     fclose(fp);
+
+    struct pixel pixel;
+    fseek(fp, bmp_header.offset, SEEK_SET);                                   
+    for (int i = 1; i <= dib_header.height; i++) 
+    {
+        for (int j = 1; j <= info.pixels_row; j++) 
+        {
+            fread(&pixel, 3, 1, fp);                                                           
+        }
+        fseek(fp, info.padding_row, SEEK_CUR);
+    }
+
+    fclose(fp);
+
+
+
 }
 
-// Affiche le pixel array octet par octet depuis la fin (l'affichage en ascii est calqué sur cette fonction):
+// Affiche le pixel array octet par octet depuis la fin (la première version de l'affichage en ascii est calquée sur cette fonction):
 void print_array_reverse(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel)
 {
     FILE *fp = fopen(img, "rb");
@@ -144,218 +164,549 @@ void print_array_reverse(char *img, bmp_header bmp_header, dib_header dib_header
         exit(EXIT_FAILURE);
     }
 
-    fseek(fp, 0, SEEK_END);//on commence avec le curseur au dernier octet du fichier (pixel en haut a droite)
+    fseek(fp, 0, SEEK_END); // on commence avec le curseur au dernier octet du fichier (pixel en haut a droite)
     printf("Pixel Array reverse: \n");
-    for (int i = 1; i <= dib_header.height; i++)// chaque tour de cette boucle print tous les pixels d'une ligne et le padding, on arrete donc i à dib_header.height, le nombre de lignes
+    for (int i = 1; i <= dib_header.height; i++) // chaque tour de cette boucle print tous les pixels d'une ligne et le padding, on arrete donc i à dib_header.height, le nombre de lignes
     {
-        fseek(fp, -info.padding_row, SEEK_CUR); //on déplace le curseur de -padding_row car on part de la fin et que le padding est en fin de ligne
-        for (int k = 0; k < info.padding_row; k++) //on print les octets de padding
+        fseek(fp, -info.padding_row, SEEK_CUR);    // on déplace le curseur de -padding_row car on part de la fin et que le padding est en fin de ligne
+        for (int k = 0; k < info.padding_row; k++) // on print les octets de padding
         {
             printf("* | ");
         }
-        for (int j = 1; j <= info.pixels_row; j++)//cette boucle affiche tous les pixels d'une ligne, chaque tour affiche un pixel, il y a donc autant de tours que de pixels par ligne
+        for (int j = 1; j <= info.pixels_row; j++) // cette boucle affiche tous les pixels d'une ligne, chaque tour affiche un pixel, il y a donc autant de tours que de pixels par ligne
         {
-            fseek(fp, -3, SEEK_CUR);//on recule le curseur de 3 octets pour lire le pixel
-            fread(&pixel, 3, 1, fp); //on lit le pixel normalement
-            printf("%d | %d | %d | ", pixel.r, pixel.g, pixel.b); //on affiche les 3 octets du pixel dans l'ordre RGB au lieu de BGR car on affiche le pixel array à l'envers
-            fseek(fp, -3, SEEK_CUR); //on recule le curseur de 3 octets car fread le fait avancer, le curseur est alors à l'endroit ou il était avant la lecture du pixel
+            fseek(fp, -3, SEEK_CUR);                              // on recule le curseur de 3 octets pour lire le pixel
+            fread(&pixel, 3, 1, fp);                              // on lit le pixel normalement
+            printf("%d | %d | %d | ", pixel.b, pixel.g, pixel.r); // on affiche les 3 octets du pixel dans l'ordre RGB au lieu de BGR car on affiche le pixel array à l'envers
+            fseek(fp, -3, SEEK_CUR);                              // on recule le curseur de 3 octets car fread le fait avancer, le curseur est alors à l'endroit ou il était avant la lecture du pixel
         }
     }
     fclose(fp);
 }
 
 // affiche le pixel array pixel par pixel (utilisée pour les tests sur petites images):
-void print_pixels(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel)
+void print_pixels(char *img, bmp_header bmp_header, dib_header dib_header, info info)
 {
+    struct pixel pixel;
     FILE *fp = fopen(img, "rb");
     if (fp == NULL)
     {
-        printf("\nerreur");
+        printf("\nImpossible d'ouvrir l'image (fp == NULL)\n");
         exit(EXIT_FAILURE);
     }
 
-    fseek(fp, bmp_header.offset, SEEK_SET);//on place le curseur au début du pixel array
+    fseek(fp, bmp_header.offset, SEEK_SET); // on place le curseur au début du pixel array
     printf("\n\nAffichage par pixel:\n");
-    int p = 1; //variable externe aux boucles pour compter le nombre de pixels lus et affichés
-    for (int i = 1; i <= dib_header.height; i++)//chaque tour affiche tous les pixels d'une ligne et avance le curseur pour sauter les octets de padding, il y a donc autant de tours que de lignes
+    int p = 1;                                   // variable externe aux boucles pour compter le nombre de pixels lus et affichés
+    for (int i = 1; i <= dib_header.height; i++) // chaque tour affiche tous les pixels d'une ligne et avance le curseur pour sauter les octets de padding, il y a donc autant de tours que de lignes
     {
-        for (int j = 1; j <= info.pixels_row; j++) //chaque tour affiche tous les pixels d'une ligne
+        for (int j = 1; j <= info.pixels_row; j++) // chaque tour affiche tous les pixels d'une ligne
         {
             fread(&pixel, 3, 1, fp);
-            printf("Pixel %d: %d, %d, %d\n", p, pixel.b, pixel.g, pixel.r); //on affiche le p-ème pixel
-            p++; //on incrémente p après chaque pixel
+            printf("Pixel %d: %d, %d, %d\n", p, pixel.b, pixel.g, pixel.r); // on affiche le p-ème pixel
+            p++;                                                            // on incrémente p après chaque pixel
         }
-        fseek(fp, info.padding_row, SEEK_CUR);//après l'affichage d'une ligne, on déplace le curseur pour sauter les octets de padding 
+        fseek(fp, info.padding_row, SEEK_CUR); // après l'affichage d'une ligne, on déplace le curseur pour sauter les octets de padding
     }
     fclose(fp);
 }
 
-//initialise une matrice
-pixel** matrix(dib_header dib_header){
-    int i, j;
+// alloue dynamiquement une matrice aux dimensions du pixel array:
+pixel **matrix(dib_header dib_header)
+{
 
-    pixel ** matrice = (pixel **)malloc(dib_header.width*sizeof(pixel));
-        for (i = 0; i<dib_header.width; i++){
-            matrice[i] = (pixel *)malloc(dib_header.height*sizeof(pixel));
-        }
+    pixel **matrice;
+    int i;
+    matrice = (pixel **)malloc(dib_header.height * sizeof(pixel *));
+    for (i = 0; i < dib_header.height; i++)
+    {
+        matrice[i] = (pixel *)malloc(dib_header.width * sizeof(pixel));
+    }
     return matrice;
 }
 
-//remplit la matrice avec les valeurs des pixels:
-pixel ** fill_matrix(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel, struct pixel ** matrice){
+// libere la mémoire allouée à la matrice:
+void free_matrix(pixel **matrice, dib_header dib_header)
+{
+    int i, j;
+    for (int i = 0; i < dib_header.height; i++)
+    {
+        free(matrice[i]);
+    }
+    free(matrice);
+}
 
-    FILE *fp = fopen(img, "rb");
+// remplit la matrice avec les valeurs du pixel array:
+pixel **fill_matrix(char *img, bmp_header bmp_header, dib_header dib_header, info info)
+{
+
+    // déclarations et allocation de la matrice:
+    int i, j;
+    pixel px;
+    pixel **matrice;
+    FILE *fp;
+
+    fp = fopen(img, "rb");
     if (fp == NULL)
     {
-        printf("\nerreur");
-        exit(EXIT_FAILURE);
+        printf("\nImpossible d'ouvrir l'image (fp == NULL)\n");
     }
-
     matrice = matrix(dib_header);
 
+    // remplissage de la matrice:
     fseek(fp, bmp_header.offset, SEEK_SET);
-    for (int i = 0; i < dib_header.height; i++){ // ligne i
-        for (int j = 0; j < info.pixels_row; j++){ // pixel j
-            fread(&pixel, 3, 1, fp);
-            matrice [i][j] = pixel;
+    for (i = dib_header.height - 1; i >= 0; i--)
+    {
+        for (j = dib_header.width - 1; j >= 0; j--)
+        {
+            fread(&px, 3, 1, fp);
+            matrice[i][j].b = px.b;
+            matrice[i][j].g = px.g;
+            matrice[i][j].r = px.r;
         }
-        fseek(fp, info.padding_row, SEEK_CUR); // padding à la fin de chaque ligne, on avance le curseur de padding_row pour préparer la prochaine lecture et on print autant de 0 qu'il y a de padding_row
+        fseek(fp, info.padding_row, SEEK_CUR);
     }
+
     fclose(fp);
     return matrice;
 }
 
-//affiche une matrice:
-void print_matrice(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel, struct pixel ** matrice){
-    matrice = fill_matrix(img, bmp_header, dib_header, info, pixel, matrice);
-    int i,j;
-
-    for (i = 0; i<dib_header.width; i++){
-        for(j = 0; j<dib_header.height; j++){
-            printf("%d %d %d | ", matrice[i][j].b, matrice[i][j].g, matrice[i][j].r);
-        }
-        printf("\n");
-    }
-}
-
-
-// Affiche un caractère par pixel:
-//(même fonction que print_array_reverse mais on print un caractère en fonction de la clarté d'un pixel au lieu de ses valeurs de rgb)
-void print_ascii(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel)
+// affiche ligne par ligne le contenu d'une matrice de dimensions height*width:
+void print_matrix(dib_header dib_header, pixel **matrice)
 {
-    FILE *fp = fopen(img, "rb");
-    if (fp == NULL)
+
+    int i, j;
+    printf("\nAffichage Matrice:\n\n");
+
+    for (i = 0; i < dib_header.height; i++)
     {
-        printf("\nerreur");
-        exit(EXIT_FAILURE);
-    }
-    printf("\n");
-    float avg; //clarté du pixel
-    fseek(fp, 0, SEEK_END);
-    for (int i = 1; i <= dib_header.height; i++)
-    {
-        fseek(fp, -info.padding_row, SEEK_CUR);
-        for (int j = 1; j <= info.pixels_row; j++)
+        for (j = 0; j < dib_header.width; j++)
         {
-            fseek(fp, -3, SEEK_CUR);
-            fread(&pixel, 3, 1, fp);
-            avg = pixel.r * 0.33 + pixel.g * 0.5 + pixel.b * 0.16; //calcul de la luminosité/clarté du pixel
-            if (avg < 25)
-            {
-                printf(" ");
-            }
-            else if (avg < 50)
-            {
-                printf(".");
-            }
-            else if (avg < 50)
-            {
-                printf(":");
-            }
-            else if (avg < 75)
-            {
-                printf("-");
-            }
-            else if (avg < 100)
-            {
-                printf("=");
-            }
-            else if (avg < 125)
-            {
-                printf("+");
-            }
-            else if (avg < 150)
-            {
-                printf("*");
-            }
-            else if (avg < 175)
-            {
-                printf("#");
-            }
-            else if (avg < 200)
-            {
-                printf("%");
-            }
-            else if (avg < 225)
-            {
-                printf("@");
-            }
-            else
-            {
-                printf("$");
-            }
-            fseek(fp, -3, SEEK_CUR);
+            printf("(%d,%d): %d,%d,%d  ", i, j, matrice[i][j].b, matrice[i][j].g, matrice[i][j].r);
         }
         printf("\n");
     }
-    fclose(fp);
 }
 
-//retourne un pixel en noir et blanc:
-pixel gray_pixel(pixel pixel){
-    pixel.r = pixel.r * 0.33 + pixel.g * 0.5 + pixel.b * 0.16;
-    pixel.b = pixel.r * 0.33 + pixel.g * 0.5 + pixel.b * 0.16;
-    pixel.g = pixel.r * 0.33 + pixel.g * 0.5 + pixel.b * 0.16;
-
-    return pixel;
+// retourne un pixel en noir et blanc:
+unsigned char gray_pixel(pixel pixel)
+{
+    return pixel.r * 0.33 + pixel.g * 0.5 + pixel.b * 0.16;
 }
-void gray_img(char *img, bmp_header bmp_header, dib_header dib_header, info info, pixel pixel, struct pixel ** matrice){
-    int i,j;
-    matrice = fill_matrix(img, bmp_header, dib_header, info, pixel, matrice);
-    for(i = 0; i<dib_header.width; i++){
-        //gray_pixel à chaque pixel
+
+void ascii_8char(dib_header dib_header, pixel **matrice)
+{
+    int i, j, h, w;
+    unsigned char charr;
+    char ascii[] = {'@', '$', '#', '+', ':', '-', '.', ' '};
+
+    printf("\nReduire la hauteur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n");
+    scanf("%d", &h);
+    if (h != 1 && h != 2 && h != 3 && h != 4)
+    {
+        printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+        do
+        {
+            printf("\nReduire la hauteur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n");
+            scanf("%d", &h);
+        } while (h != 1 && h != 2 && h != 3 && h!= 4);
     }
 
+    printf("\nReduire la largeur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n\n");
+    scanf("%d", &w);
+    if (w != 1 && w != 2 && w != 3 && w != 4)
+    {
+        printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+        do
+        {
+            printf("\nReduire la largeur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n\n");
+            scanf("%d", &h);
+        } while (w != 1 && w != 2 && w != 3 && w != 4);
+    }
+    if (h == 3){
+        h = 4;
+    }
+    if (w == 3){
+        w = 4;
+    }
+    if (h == 4){
+        h = 8;
+    }
+    if (w == 4){
+        w = 8;
+    }
+
+    for (i = 0; i < dib_header.height; i = i + h)
+    {
+        for (j = dib_header.width - 1; j >= 0; j = j - w)
+        {
+            charr = gray_pixel(matrice[i][j]);
+            printf("%c", ascii[7 - charr / 32]);
+        }
+        printf("\n");
+    }
 }
 
-
-
-int main(void)
+void ascii_8char_negative(dib_header dib_header, pixel **matrice)
 {
-    //déclaration des 4 structures:
+    int i, j, h, w;
+    unsigned char charr;
+    char ascii[] = {'@', '$', '#', '+', ':', '-', '.', ' '};
+
+    printf("\nReduire la hauteur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8)\n");
+    scanf("%d", &h);
+    if (h != 1 && h != 2 && h != 3)
+    {
+        printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+        do
+        {
+            printf("\nReduire la hauteur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n");
+            scanf("%d", &h);
+        } while (h != 1 && h != 2 && h != 3);
+    }
+
+    printf("\nReduire la largeur? (1: non; 2: 2px; 3: 4px)\n");
+    scanf("%d", &w);
+    if (w != 1 && w != 2 && w != 3)
+    {
+        printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+        do
+        {
+            printf("\nReduire la largeur? (1: non; 2: 2px; 3: 4px)\n");
+            scanf("%d", &h);
+        } while (w != 1 && w != 2 && w != 3);
+    }
+    if (h == 3)
+        h = 4;
+    if (w == 3)
+        w == 4;
+
+    for (i = 0; i < dib_header.height; i = i + h)
+    {
+        for (j = dib_header.width - 1; j >= 0; j = j - w)
+        {
+            charr = gray_pixel(matrice[i][j]);
+            printf("%c", ascii[charr / 32]);
+        }
+        printf("\n");
+    }
+}
+
+void ascii_title(dib_header dib_header, pixel **matrice)
+{
+    int i, j, h = 2, w = 1;
+
+
+    unsigned char charr;
+    char ascii[] = {'@', '$', '#', '+', ':', '-', '.', ' '};
+    for (i = 0; i < dib_header.height; i++)
+    {
+        for (j = dib_header.width - 1; j >= 0; j--)
+        {
+            charr = gray_pixel(matrice[i][j]);
+            printf("%c", ascii[charr / 32]);
+        }
+        printf("\n");
+    }
+}
+
+void ascii_10char(dib_header dib_header, pixel **matrice)
+{
+    int i, j, h, w;
+    unsigned char charr;
+    char ascii[] = {'@', '%', '#', '*', '+', '=', '-', ':', '.', ' '};
+
+    for (i = 0; i < dib_header.height; i++)
+    {
+        for (j = dib_header.width - 1; j >= 0; j--)
+        {
+            charr = gray_pixel(matrice[i][j]);
+            printf("%c", ascii[9 - charr / 26]);
+        }
+        printf("\n");
+    }
+}
+
+void ascii_16char(dib_header dib_header, pixel **matrice)
+{
+    int i, j, h, w;
+    unsigned char charr;
+    char ascii[] = {'$', '8', '#', 'h', 'Z', 'L', 'Y', 'v', 'r', '/', '{', '_', '>', 'I', '^', ' '};
+    printf("\nReduire la hauteur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n");
+    scanf("%d", &h);
+    if (h != 1 && h != 2 && h != 3)
+    {
+        printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+        do
+        {
+            printf("\nReduire la hauteur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n");
+            scanf("%d", &h);
+        } while (h != 1 && h != 2 && h != 3);
+    }
+
+    printf("\nReduire la largeur? (1: non; 2: 2px; 3: 4px)\n");
+    scanf("%d", &w);
+    if (w != 1 && w != 2 && w != 3)
+    {
+        printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+        do
+        {
+            printf("\nReduire la largeur? (1: non; 2: 2px; 3: 4px)\n");
+            scanf("%d", &h);
+        } while (w != 1 && w != 2 && w != 3);
+    }
+    if (h == 3)
+        h = 4;
+    if (w == 3)
+        w == 4;
+
+    for (i = 0; i < dib_header.height; i = i + h)
+    {
+        for (j = dib_header.width - 1; j >= 0; j = j - w)
+        {
+            charr = gray_pixel(matrice[i][j]);
+            printf("%c", ascii[9 - charr / 16]);
+        }
+        printf("\n");
+    }
+}
+
+void ascii_64char(dib_header dib_header, pixel **matrice)
+{
+    int i, j, h, w;
+    unsigned char charr;
+    char ascii[] = {'$', '@', 'B', '%', '8', '&', 'W', 'M', '#', '*', 'o', 'a', 'h', 'k', 'b', 'd', 'p', 'q', 'w', 'm', 'Z', 'O', '0', 'Q', 'L', 'C', 'J', 'U', 'Y', 'X', 'z', 'c', 'v', 'u', 'n', 'x', 'r', 'j', 'f', 't', '/', '|', '(', '1', '{', '[', '?', '-', '_', '+', '~', '<', '>', 'i', '!', 'l', 'I', ';', ':', '"', '^', '`', '.', ' '};
+
+    printf("\nReduire la hauteur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n");
+    scanf("%d", &h);
+    if (h != 1 && h != 2 && h != 3)
+    {
+        printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+        do
+        {
+            printf("\nReduire la hauteur?\n1: non\n2: Diviser par 2;\n3: Diviser par 4\n4: Diviser par 8\n");
+            scanf("%d", &h);
+        } while (h != 1 && h != 2 && h != 3);
+    }
+
+    printf("\nReduire la largeur? (1: non; 2: 2px; 3: 4px)\n");
+    scanf("%d", &w);
+    if (w != 1 && w != 2 && w != 3)
+    {
+        printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+        do
+        {
+            printf("\nReduire la largeur? (1: non; 2: 2px; 3: 4px)\n");
+            scanf("%d", &h);
+        } while (w != 1 && w != 2 && w != 3);
+    }
+    if (h == 3)
+        h = 4;
+    if (w == 3)
+        w == 4;
+
+    for (i = 0; i < dib_header.height; i = i + h)
+    {
+        for (j = dib_header.width - 1; j >= 0; j = j - w)
+        {
+            charr = gray_pixel(matrice[i][j]);
+            printf("%c", ascii[63 - charr / 4]);
+        }
+        printf("\n");
+    }
+}
+
+void print_ascii()
+{
+
     bmp_header bmp_header;
     dib_header dib_header;
     info info;
-    pixel pixel;
+    pixel **matrice;
+    char img[20];
+    int res, res2, res3;
+
+    while (true)
+    {
+        printf("\n\t~Affichage ASCII~\n\nChoisir une image: ");
+        scanf("%s", &img);
+
+        // On remplit les structures grâce aux fonctions et on déclare une matrice de pixels:
+        bmp_header = read_bmp(img, bmp_header);
+        dib_header = read_dib(img, dib_header);
+        info = get_info(bmp_header, dib_header);
+        matrice = fill_matrix(img, bmp_header, dib_header, info);
+
+        printf("\nCombien de caracteres? (1: 8; 2:16; 3: 64)\n");
+        scanf("%d", &res);
+
+        if (res != 1 && res != 2 && res != 3)
+        {
+            printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+            do
+            {
+                printf("\nCombien de caracteres? (1: 8; 2:16; 3: 64)\n");
+                scanf("%d", &res);
+            } while (res != 1 && res != 2 && res != 3);
+        }
+
+        switch (res)
+        {
+
+        case 1:
+            ascii_8char(dib_header, matrice);
+            break;
+
+        case 2:
+            ascii_16char(dib_header, matrice);
+            break;
+        case 3:
+            ascii_64char(dib_header, matrice);
+            break;
+        }
+
+        printf("\nContinuer? (1: oui; 2: non)\n");
+        scanf("%d", &res3);
+        if (res3 != 1 && res3 != 2)
+        {
+            printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+            do
+            {
+                printf("\nContinuer? (1: oui; 2: non");
+                scanf("%d", &res3);
+            } while (res3 != 1 && res3 != 2);
+        }
+
+        free_matrix(matrice, dib_header);
+        if (res3 == 2)
+            break;
+    }
+}
+
+void autres()
+{
+
+    bmp_header bmp_header;
+    dib_header dib_header;
+    info info;
+    pixel **matrice;
+    char img[20];
+    int res, res2, res3;
+
+    while (true)
+    {
+        printf("\n\t~Autres Fonctions~\n\nChoisir une image: ");
+        scanf("%s", &img);
+
+        // On remplit les structures grâce aux fonctions et on déclare une matrice de pixels:
+        bmp_header = read_bmp(img, bmp_header);
+        dib_header = read_dib(img, dib_header);
+        info = get_info(bmp_header, dib_header);
+        matrice = fill_matrix(img, bmp_header, dib_header, info);
+
+        printf("\n\n\t~Que voulez-vous faire?~\n\n1: Afficher les infos de l'image\n2: Afficher la matrice\n3: Afficher les valeurs de chaque pixel, pixel par pixel\n");
+        scanf("%d", &res);
+
+        if (res != 1 && res != 2 && res != 3)
+        {
+            printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+            do
+            {
+                printf("\n\n1: Afficher les infos de l'image\n2: Afficher la matrice\n3: Afficher les valeurs de chaque pixel, pixel par pixel\n");
+                scanf("%d", &res);
+            } while (res != 1 && res != 2 && res != 3);
+        }
+
+        switch (res)
+        {
+        case 1:
+            printf("\n\tInfos:\n\n");
+            print_info(bmp_header, dib_header, info);
+            break;
+
+        case 2:
+            printf("\n\tMatrice:\n\n");
+            print_matrix(dib_header, matrice);
+            break;
+        case 3:
+            printf("\n\tPixels:\n\n");
+            print_pixels(img, bmp_header, dib_header, info);
+            break;
+        }
+
+        printf("\nContinuer? (1: oui; 2: non)\n");
+        scanf("%d", &res3);
+        if (res3 != 1 && res3 != 2)
+        {
+            printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+            do
+            {
+                printf("\nContinuer? (1: oui; 2: non");
+                scanf("%d", &res3);
+            } while (res3 != 1 && res3 != 2);
+        }
+
+        free_matrix(matrice, dib_header);
+        if (res3 == 2)
+            break;
+    }
+}
+
+int main(void)
+{
+    bmp_header bmp_header;
+    dib_header dib_header;
+    info info;
+    pixel **matrice;
+    int res, res2, res3;
 
     if (sizeof(char) == 1 && sizeof(short int) == 2 && sizeof(int) == 4)
     {
-
-        // On remplit les structures grâce aux fonctions:
-        bmp_header = read_bmp("small.bmp", bmp_header);
-        dib_header = read_dib("small.bmp", dib_header);
+        char img[20] = "titre.bmp";
+        bmp_header = read_bmp(img, bmp_header);
+        dib_header = read_dib(img, dib_header);
         info = get_info(bmp_header, dib_header);
+        matrice = fill_matrix(img, bmp_header, dib_header, info);
+        ascii_title(dib_header, matrice);
+        free_matrix(matrice, dib_header);
 
-        //print_info(bmp_header, dib_header, info); //affichage des infos des 2 headers et du struct info (debug)
-        printf("\n");
-        struct pixel ** matrice = matrix(dib_header);
-        fill_matrix("small.bmp", bmp_header, dib_header, info, pixel, matrice);
-        print_matrice("small.bmp", bmp_header, dib_header, info, pixel, matrice);
-        // prints_array("oui.bmp", bmp_header, dib_header, info, pixel);
-        // print_pixels("oui.bmp", bmp_header, dib_header, info, pixel);
-        // print_array_reverse("oui.bmp", bmp_header, dib_header, info, pixel);
-        //print_ascii("musashi.bmp", bmp_header, dib_header, info, pixel);
+        printf("\n\tNaim Chefirat et Gauvain Crevot");
 
+        while (true)
+        {
+            printf("\n\n\t\t****MENU PRINCIPAL****");
+            printf("\n\n\t~Que voulez-vous faire?~\n\n1: Affichage ascii\n2: Autres fonctions\n3: Quitter\n");
+            scanf("%d", &res);
+
+            if (res != 1 && res != 2 && res != 3)
+            {
+                printf("\n*****\tReponse incorrecte, veuillez entrer une valeur reconnue!\t*****\n\n");
+                do
+                {
+                    printf("\n\n1: Affichage ascii\n2: Autres fonctions\n3: Quitter\n");
+                    scanf("%d", &res);
+                } while (res != 1 && res != 2 && res != 3);
+            }
+
+            switch (res)
+            {
+            case 1:
+                print_ascii();
+                printf("Retour au menu principal");
+                break;
+
+            case 2:
+                autres();
+                printf("Retour au menu principal");
+                break;
+
+                break;
+            case 3:
+                break;
+            }
+            if (res == 3) break;
+        }
+        printf("\nMerci d'avoir utilise notre programme");
         return EXIT_SUCCESS;
     }
     else
