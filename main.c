@@ -7,7 +7,7 @@ struct bmp_header
 {                            // correspond aux 14 premiers octets
     unsigned char name[2];   // BM
     unsigned int size;       // taille de l'image au total (headers inclus)
-    unsigned short int app1; // on s'en fout mais c'est 0
+    unsigned short int app1; // toujours 0
     unsigned short int app2; // pareil
     unsigned int offset;     // octet du premier pixel= 54 pour les 24bits(16 777 216 couleurs), 1078 pour les 8bits(256 couleurs) 118 pour les 4bits(16 couleurs)
 };
