@@ -11,6 +11,6 @@ plusieurs transformations sur les dimensions de l'image, et de choisir le nombre
 
 Ce programme foncitonne sous Windows, Mac et Linux, il n'y a qu'un fichier à compiler. Exemple avec GCC:
 
-    gcc programme_principal.c -o prog && ./prog
+    gcc main.c -o main && ./main
 
 Plus de détails sur l'utilisation du programme et les différentes options sont disponibles dans le rapport pdf, Annexe B (page 25).
